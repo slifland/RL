@@ -19,19 +19,18 @@ if __name__ == "__main__":
     agent_one = DQNAgent(num_players=NUM_PLAYERS_PER_TEAM, num_actions=NUM_ACTIONS, epsilon=0)
     agent_two= DQNAgent(num_players=NUM_PLAYERS_PER_TEAM, num_actions=NUM_ACTIONS, epsilon=0)
     
-    agent_one.policy_net.load_state_dict(torch.load('models/AgentOne_10000.pth', map_location="cpu"))
+    agent_one.policy_net.load_state_dict(torch.load('models/lastAgentOne.pth', map_location="cpu"))
     agent_one.policy_net.eval()
-    agent_two.policy_net.load_state_dict(torch.load('models/AgentTwo_10000.pth', map_location="cpu"))
+    agent_two.policy_net.load_state_dict(torch.load('models/lastAgentTwo.pth', map_location="cpu"))
     agent_two.policy_net.eval()
     
     for episode in range(NUM_EPISODES):
         obs, _ = env.reset()
         while True:
             obs_tensor = torch.tensor(np.array(obs['team_1']), dtype=torch.float32, device=device).unsqueeze(0)
-            step += 1
             #Sample actions from agents
-            action_one = agent_one.act(obs=obs_tensor)
-            action_two = agent_two.act(obs=obs_tensor)
+            action_one, q_vals = agent_one.act(obs=obs_tensor)
+            action_two, q_vals = agent_two.act(obs=obs_tensor)
             action = {"team_1" : action_one, "team_2" : action_two}
             
             #Advance game
@@ -46,17 +45,13 @@ if __name__ == "__main__":
             if done:
                 break
             
-        if rewards['team_1'] == 10:
+        if rewards['team_1'] > rewards['team_2']:
             winner = 1
-        elif rewards['team_2'] == 10:
+        elif rewards['team_2'] >  rewards['team_1']:
             winner = 2
-        else:
-            winner = 0
         match winner:
             case 1:
                 win_str = "Team 1"
-            case 0:
-                win_str = "Timed Out"
             case 2:
                 win_str = "Team 2"
         print(f"Episode: {episode}, Winner: {win_str}")

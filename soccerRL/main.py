@@ -9,7 +9,7 @@ NUM_PLAYERS_PER_TEAM = 5
 NUM_ACTIONS=9
 MAX_STEPS=1000
 SAVE_LAST_FREQ = 50
-SAVE_ALL_FREQ = 5000
+SAVE_ALL_FREQ = 20000
 AGENT_UPDATE_FREQ = 20
 device = torch.device('mps')
 
@@ -47,8 +47,8 @@ if __name__ == "__main__":
             obs_tensor = torch.tensor(np.array(obs['team_1']), dtype=torch.float32, device=device).unsqueeze(0)
             step += 1
             #Sample actions from agents
-            action_one = agent_one.act(obs=obs_tensor)
-            action_two = agent_two.act(obs=obs_tensor)
+            action_one, q_vals_one = agent_one.act(obs=obs_tensor)
+            action_two, q_vals_two = agent_two.act(obs=obs_tensor)
             action = {"team_1" : action_one, "team_2" : action_two}
             
             #Advance game
@@ -74,7 +74,9 @@ if __name__ == "__main__":
                 loss_two = agent_two.update()
                 if loss_two is not None:
                     total_loss_two += float(loss_two)
-            
+                    
+
+                
             #env.render() #Don't render during training
                         
             #End if one team scores or hit max steps, and reset
@@ -89,10 +91,12 @@ if __name__ == "__main__":
         avg_reward_one.append(total_reward_one)
         avg_reward_two.append(total_reward_two)
         avg_steps.append(step)
-            
-        if rewards['team_1'] == 10:
+        
+        if step == MAX_STEPS:
+            winner = 0
+        elif rewards['team_1'] > rewards['team_2']:
             winner = 1
-        elif rewards['team_2'] == 10:
+        elif rewards['team_2'] > rewards['team_1']:
             winner = 2
         else:
             winner = 0
@@ -101,12 +105,7 @@ if __name__ == "__main__":
             "Average Total Reward For Agent Two Over Last 50 Episodes": np.mean(avg_reward_two),
             "Average Total Steps Per Game for Last 50 Episodes": np.mean(avg_steps),
             "Steps": step,
-            "Episode": episode,
-            "Winner": winner,
-            "Loss Per Step for Agent One": total_loss_one / step,
-            "Loss Per Step for Agent Two": total_loss_two / step,
             "Agent One Epsilon": agent_one.epsilon,
-            "Agent Two Epsilon": agent_two.epsilon,
         })
         match winner:
             case 1:

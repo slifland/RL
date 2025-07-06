@@ -73,7 +73,7 @@ class DQNAgent(SoccerAgent):
             self.policy_net.load_state_dict(state_dict)
             self.target_net.load_state_dict(state_dict)
             
-        self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=1e-4)
+        self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=5e-5)
         self.replay_buffer = ReplayBuffer()
         self.batch_size = 64
         self.gamma = 0.99
@@ -88,14 +88,17 @@ class DQNAgent(SoccerAgent):
             self.epsilon_end = 0.05
             self.epsilon_decay = 100000
 
-    def act(self, obs):
+    def act(self, obs) -> tuple:
         if np.random.rand() < self.epsilon:
-            return np.random.randint(0, 9, size=(self.num_players,))
+            return np.random.randint(0, 9, size=(self.num_players,)), None
         else:
             q_vals = self.policy_net(obs)
+            q_max = q_vals.max().item()
+            q_min = q_vals.min().item()
+            q_mean = q_vals.mean().item()
             argmax_actions = q_vals[0].argmax(dim=1) #shape: [num_players]
             action_tuple = tuple(argmax_actions.tolist())
-            return action_tuple
+            return action_tuple, (q_max, q_min, q_mean)
 
     def store_transition(self, obs, action, reward, next_obs, done):
         self.replay_buffer.push(obs, action, reward, next_obs, done)
