@@ -7,7 +7,7 @@ import numpy as np
 NUM_EPISODES = 500000
 NUM_PLAYERS_PER_TEAM = 5
 NUM_ACTIONS=9
-MAX_STEPS=2000
+MAX_STEPS=1000
 SAVE_LAST_FREQ = 50
 SAVE_ALL_FREQ = 5000
 AGENT_UPDATE_FREQ = 20
@@ -17,7 +17,7 @@ device = torch.device('mps')
 
 if __name__ == "__main__":
     wandb.init(
-        project="gridworld-dqn",
+        project="RLSoccer",
         config={
             "Episodes": NUM_EPISODES,
             "Players per team" : NUM_PLAYERS_PER_TEAM,
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         total_loss_one = 0
         total_loss_two = 0
         while True:
-            obs_tensor = torch.tensor([obs], dtype=torch.float32, device=device)
+            obs_tensor = torch.tensor(np.array(obs['team_1']), dtype=torch.float32, device=device).unsqueeze(0)
             step += 1
             #Sample actions from agents
             action_one = agent_one.act(obs=obs_tensor)
@@ -53,7 +53,7 @@ if __name__ == "__main__":
             
             #Advance game
             next_obs, rewards, terminated, truncated, info = env.step(action)
-            next_obs_tensor = torch.tensor([next_obs], dtype=torch.float32, device=device)
+            next_obs_tensor = torch.tensor(np.array(obs['team_2']), dtype=torch.float32, device=device).unsqueeze(0)
             done = any(terminated.values()) or any(truncated.values())
             
             total_reward_one += rewards['team_1']
@@ -66,14 +66,16 @@ if __name__ == "__main__":
             obs = next_obs
             
             
-            if AGENT_UPDATE_FREQ % step == 0:
-                #Update agents
+            if step % AGENT_UPDATE_FREQ  == 0:
                 loss_one = agent_one.update()
-                total_loss_one += float(loss_one) # type: ignore
+                if loss_one is not None:
+                    total_loss_one += float(loss_one)
+
                 loss_two = agent_two.update()
-                total_loss_two += float(loss_two) # type: ignore
+                if loss_two is not None:
+                    total_loss_two += float(loss_two)
             
-            env.render() #Don't render during training
+            #env.render() #Don't render during training
                         
             #End if one team scores or hit max steps, and reset
             if done:
@@ -103,15 +105,25 @@ if __name__ == "__main__":
             "Winner": winner,
             "Loss Per Step for Agent One": total_loss_one / step,
             "Loss Per Step for Agent Two": total_loss_two / step,
+            "Agent One Epsilon": agent_one.epsilon,
+            "Agent Two Epsilon": agent_two.epsilon,
         })
+        match winner:
+            case 1:
+                win_str = "Team 1"
+            case 0:
+                win_str = "Timed Out"
+            case 2:
+                win_str = "Team 2"
+        print(f"Episode: {episode}, Winner: {win_str}")
         
         #Save models if applicable
         if episode % SAVE_LAST_FREQ == 0:
             save_path = 'models/last.pth'
-            torch.save(agent_one.policy_net, 'models/lastAgentOne.pth')
-            torch.save(agent_two.policy_net, 'models/lastAgentTwo.pth')
+            torch.save(agent_one.policy_net.state_dict(), 'models/lastAgentOne.pth')
+            torch.save(agent_two.policy_net.state_dict(), 'models/lastAgentTwo.pth')
         if episode % SAVE_ALL_FREQ == 0:
-            torch.save(agent_one.policy_net, f'models/AgentOne_{episode}.pth')
-            torch.save(agent_two.policy_net, f'models/AgentTwo_{episode}.pth')
+            torch.save(agent_one.policy_net.state_dict(), f'models/AgentOne_{episode}.pth')
+            torch.save(agent_two.policy_net.state_dict(), f'models/AgentTwo_{episode}.pth')
         
     env.close()

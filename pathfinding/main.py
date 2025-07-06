@@ -48,7 +48,7 @@ wandb.init(
         "update_freq": agent.update_freq,
         "num_episodes": num_episodes
     }
-)
+)   
 
 #wandb.watch(agent.policy_net, log='all', log_freq=500)
 

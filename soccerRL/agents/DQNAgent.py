@@ -10,7 +10,7 @@ from .agent import SoccerAgent
 device = torch.device('mps')
 
 class ReplayBuffer:
-    def __init__(self, capacity=10000):
+    def __init__(self, capacity=50000):
         self.buffer = deque(maxlen=capacity)
 
     def push(self, state, action, reward, next_state, done):
@@ -22,7 +22,7 @@ class ReplayBuffer:
 
         return (
             torch.stack(states),       # already torch tensors
-            torch.tensor(actions, dtype=torch.int64, device=device),
+            torch.tensor(np.array(actions), dtype=torch.int64, device=device),
             torch.tensor(rewards, dtype=torch.float32, device=device),
             torch.stack(next_states),  # already torch tensors
             torch.tensor(dones, dtype=torch.float32, device=device),
@@ -115,6 +115,8 @@ class DQNAgent(SoccerAgent):
         with torch.no_grad():
             best_actions = self.policy_net(s2).argmax(dim=2) #shape: [B, num_actions]
             next_q_vals = self.target_net(s2).gather(2, best_actions.unsqueeze(2)).squeeze(2) #shape: [B, num_actions]
+            r = r.unsqueeze(1)
+            d = d.unsqueeze(1)
             target = r + self.gamma * next_q_vals * (1 - d)
             target = target.clamp(-10, 10)
 
