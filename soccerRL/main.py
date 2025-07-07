@@ -6,6 +6,8 @@ import numpy as np
 
 NUM_EPISODES = 500000
 NUM_PLAYERS_PER_TEAM = 5
+FIELD_HEIGHT = 800
+FIELD_WIDTH = 1000
 NUM_ACTIONS=9
 MAX_STEPS=1000
 SAVE_LAST_FREQ = 50
@@ -22,11 +24,13 @@ if __name__ == "__main__":
             "Episodes": NUM_EPISODES,
             "Players per team" : NUM_PLAYERS_PER_TEAM,
             "Available actions": NUM_ACTIONS,
-            "Max steps" : MAX_STEPS
+            "Max steps" : MAX_STEPS,
+            "Field height" : FIELD_HEIGHT,
+            "Field width" : FIELD_WIDTH
         }
     )
     
-    env = SoccerMultiAgentEnv(max_steps=MAX_STEPS)
+    env = SoccerMultiAgentEnv(max_steps=MAX_STEPS, num_players=NUM_PLAYERS_PER_TEAM, field_height=FIELD_HEIGHT, field_width=FIELD_WIDTH)
     
     agent_one = DQNAgent(num_players=NUM_PLAYERS_PER_TEAM, num_actions=NUM_ACTIONS)
     agent_two= DQNAgent(num_players=NUM_PLAYERS_PER_TEAM, num_actions=NUM_ACTIONS)
@@ -58,13 +62,11 @@ if __name__ == "__main__":
             
             total_reward_one += rewards['team_1']
             total_reward_two += rewards['team_2']
-            
+                        
             #Store info in replay buffers
             agent_one.store_transition(obs_tensor, action_one, rewards['team_1'], next_obs_tensor, done)
             agent_two.store_transition(obs_tensor, action_two, rewards['team_2'], next_obs_tensor, done)
-            
             obs = next_obs
-            
             
             if step % AGENT_UPDATE_FREQ  == 0:
                 loss_one = agent_one.update()
@@ -74,6 +76,11 @@ if __name__ == "__main__":
                 loss_two = agent_two.update()
                 if loss_two is not None:
                     total_loss_two += float(loss_two)
+            
+            # if q_vals_one:
+            #     wandb.log({'Q_max_1': q_vals_one[0],
+            #             'Q_min_1': q_vals_one[1],
+            #             'Q_mean_1': q_vals_one[2]})
                     
 
                 
@@ -119,10 +126,10 @@ if __name__ == "__main__":
         #Save models if applicable
         if episode % SAVE_LAST_FREQ == 0:
             save_path = 'models/last.pth'
-            torch.save(agent_one.policy_net.state_dict(), 'models/lastAgentOne.pth')
-            torch.save(agent_two.policy_net.state_dict(), 'models/lastAgentTwo.pth')
+            torch.save(agent_one.policy_net.state_dict(), f'models/lastAgentOne_{NUM_PLAYERS_PER_TEAM}_players.pth')
+            torch.save(agent_two.policy_net.state_dict(), f'models/lastAgentTwo_{NUM_PLAYERS_PER_TEAM}_players.pth')
         if episode % SAVE_ALL_FREQ == 0:
-            torch.save(agent_one.policy_net.state_dict(), f'models/AgentOne_{episode}.pth')
-            torch.save(agent_two.policy_net.state_dict(), f'models/AgentTwo_{episode}.pth')
+            torch.save(agent_one.policy_net.state_dict(), f'models/AgentOne_{episode}_{NUM_PLAYERS_PER_TEAM}_players.pth')
+            torch.save(agent_two.policy_net.state_dict(), f'models/AgentTwo_{episode}_{NUM_PLAYERS_PER_TEAM}_players.pth')
         
     env.close()

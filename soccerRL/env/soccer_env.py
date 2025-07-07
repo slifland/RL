@@ -23,12 +23,12 @@ MAX_VELOCITY = 300
 class SoccerMultiAgentEnv(gym.Env):
     metadata = {"render_modes": []}
 
-    def __init__(self, render_mode=None, max_steps=2000):
-        self.num_players = 5
+    def __init__(self, render_mode=None, max_steps=2000, num_players = 5, field_width=400, field_height=200):
+        self.num_players = num_players
         self.team_ids = ['team_1', 'team_2']
         self.agent_ids = self.team_ids
-        self.field_width = 800
-        self.field_height = 400
+        self.field_width = field_width
+        self.field_height = field_height
         self.dt = 1 / 30
 
         self.max_steps = max_steps
@@ -174,15 +174,15 @@ class SoccerMultiAgentEnv(gym.Env):
     
     def _ball_velocity_toward_goal_bonus(self):
         ball_vel = self.ball.velocity
-        if ball_vel.length < 10:
+        if ball_vel.length < 1e-5:
             return {"team_1": 0.0, "team_2": 0.0}
 
-        dir_vector = ball_vel.normalized()
+        dir_vector = ball_vel / ball_vel.length  # manually normalize to avoid NaNs
         team_1_dir = np.array([1, 0])
         team_2_dir = np.array([-1, 0])
         reward = {
-            "team_1": np.dot(dir_vector, team_1_dir) * 0.3,
-            "team_2": np.dot(dir_vector, team_2_dir) * 0.3,
+            "team_1": float(np.dot(dir_vector, team_1_dir)) * 0.3,
+            "team_2": float(np.dot(dir_vector, team_2_dir)) * 0.3,
         }
         return reward
     
@@ -193,13 +193,25 @@ class SoccerMultiAgentEnv(gym.Env):
                 [self.agent_bodies[f"{team}_{i}"].position.x,
                 self.agent_bodies[f"{team}_{i}"].position.y]
                 for i in range(self.num_players)
-            ])
-            mean_dist = np.mean([
+            ], dtype=np.float32)
+
+            if len(positions) < 2:
+                bonus[team] = 0.0  # nothing to compute
+                continue
+
+            dists = [
                 np.linalg.norm(positions[i] - positions[j])
-                for i in range(len(positions)) for j in range(i+1, len(positions))
-            ])
-            bonus[team] = np.clip(mean_dist / self.field_width, 0, 1) * 0.1
+                for i in range(len(positions)) for j in range(i + 1, len(positions))
+            ]
+
+            if len(dists) == 0:
+                bonus[team] = 0.0
+            else:
+                mean_dist = np.mean(dists)
+                bonus[team] = np.clip(mean_dist / self.field_width, 0, 1) * 0.1
+
         return bonus
+
 
     def step(self, action_dict):
         self.steps += 1
@@ -226,24 +238,26 @@ class SoccerMultiAgentEnv(gym.Env):
         spread_bonus = self._team_spread_bonus()
         rewards = self._get_rewards()
         infos = {team: {} for team in self.team_ids}
+        # print("progress_bonus:", progress_bonus)
+        # print("ball_velo_bonus:", ball_velo_bonus)
+        # print("spread_bonus:", spread_bonus)
+        # print("raw rewards:", rewards)
         for team in self.team_ids:
-            rewards[team] += progress_bonus[team]
-            rewards[team] += ball_velo_bonus[team]
-            rewards[team] += spread_bonus[team]
-            rewards[team] -= 0.01
-            infos[team]["progress_bonus"] = progress_bonus[team]
-            infos[team]["velocity_bonus"] = ball_velo_bonus[team]
-            infos[team]["spread_bonus"] = spread_bonus[team]
+            rewards[team] += 3 * progress_bonus[team]
+            rewards[team] += 3 * ball_velo_bonus[team]
+            rewards[team] += 3 * spread_bonus[team]
+            infos[team]["progress_bonus"] = 3 * progress_bonus[team]
+            infos[team]["velocity_bonus"] = 3 * ball_velo_bonus[team]
+            infos[team]["spread_bonus"] = 3 * spread_bonus[team]
         terminateds = self._get_terminated()
         truncateds = {team: truncated for team in self.team_ids}
-
         return obs, rewards, terminateds, truncateds, infos
 
     def _get_rewards(self):
         if self.goal_scored == "team_1":
-            return {"team_1": 10.0, "team_2": -10.0}
+            return {"team_1": 30.0, "team_2": -30.0}
         elif self.goal_scored == "team_2":
-            return {"team_1": -10.0, "team_2": 10.0}
+            return {"team_1": -30.0, "team_2": 30.0}
         else:
             ball_x = self.ball.position.x
             halfway = self.field_width / 2
@@ -300,7 +314,7 @@ class SoccerMultiAgentEnv(gym.Env):
 
         # Optional: add center line
         self.ax.plot([self.field_width / 2, self.field_width / 2], [0, self.field_height], 'gray', linestyle='--', alpha=0.5)
-
+        plt.title(str(self.steps))
         plt.pause(0.01)
 
 
