@@ -5,22 +5,25 @@ import torch
 import numpy as np
 
 NUM_EPISODES = 5
-NUM_PLAYERS_PER_TEAM = 2
+NUM_PLAYERS_PER_TEAM = 3
 match NUM_PLAYERS_PER_TEAM:
     case 5:
         FIELD_HEIGHT = 800
-        FIELD_WIDTH = 1000
+        FIELD_WIDTH = 1200
     case 4:
         FIELD_HEIGHT = 500
-        FIELD_WIDTH = 700
+        FIELD_WIDTH = 900
     case 1:
         FIELD_HEIGHT = 200
-        FIELD_WIDTH = 400
+        FIELD_WIDTH = 600
     case 2:
         FIELD_HEIGHT = 300
-        FIELD_WIDTH = 600
+        FIELD_WIDTH = 800
+    case 3:
+        FIELD_HEIGHT = 600
+        FIELD_WIDTH = 1000
 NUM_ACTIONS=9
-MAX_STEPS=500
+MAX_STEPS=1000
 device = torch.device('mps')
 
 
@@ -46,7 +49,7 @@ if __name__ == "__main__":
             action_two, q_vals = agent_two.act(obs=obs_tensor)
             action = {"team_1" : action_one, "team_2" : action_two}
             
-            print(q_vals)
+            #print(q_vals)
             
             #Advance game
             next_obs, rewards, terminated, truncated, info = env.step(action)

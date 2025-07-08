@@ -6,8 +6,22 @@ import numpy as np
 
 NUM_EPISODES = 500000
 NUM_PLAYERS_PER_TEAM = 5
-FIELD_HEIGHT = 800
-FIELD_WIDTH = 1000
+match NUM_PLAYERS_PER_TEAM:
+    case 5:
+        FIELD_HEIGHT = 800
+        FIELD_WIDTH = 1200
+    case 4:
+        FIELD_HEIGHT = 500
+        FIELD_WIDTH = 900
+    case 1:
+        FIELD_HEIGHT = 200
+        FIELD_WIDTH = 600
+    case 2:
+        FIELD_HEIGHT = 300
+        FIELD_WIDTH = 800
+    case 3:
+        FIELD_HEIGHT = 600
+        FIELD_WIDTH = 1000
 NUM_ACTIONS=9
 MAX_STEPS=1000
 SAVE_LAST_FREQ = 50

@@ -36,7 +36,7 @@ if __name__ == "__main__":
     agents = {}
     for agent_id in agent_ids:
         agent = DQNAgent(obs_dim=obs_dim, num_actions=NUM_ACTIONS, epsilon=0)
-        model_path = f"models/last_{agent_id}.pth"
+        model_path = f"models/last_{agent_id}_{NUM_AGENTS}_agents.pth"
         agent.policy_net.load_state_dict(torch.load(model_path, map_location=device))
         agent.policy_net.eval()
         agents[agent_id] = agent

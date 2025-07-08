@@ -64,7 +64,7 @@ class SoccerPolicy(nn.Module):
 
 
 class DQNAgent(SoccerAgent):
-    def __init__(self, epsilon=0.9, path=None, num_players=5, num_actions=9, n_step=10):
+    def __init__(self, epsilon=0.9, path=None, num_players=5, num_actions=9, n_step=30):
         super().__init__(num_players=num_players)
         self.num_actions = num_actions
         self.num_players = num_players

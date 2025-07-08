@@ -219,7 +219,7 @@ class SoccerMultiAgentEnv(gym.Env):
             for i in range(self.num_players):
                 action_idx = action_dict[team][i]
                 fx, fy = ACTION_DIRECTIONS[action_idx]
-                self.agent_bodies[f"{team}_{i}"].apply_force_at_local_point((fx * 500, fy * 500))
+                self.agent_bodies[f"{team}_{i}"].apply_force_at_local_point((fx * 50, fy * 50))
         prev_ball_x = self.ball.position.x
         self.space.step(self.dt)
 
